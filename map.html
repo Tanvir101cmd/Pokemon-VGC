@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Kanto Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<!-- Leaflet Draw (DEV TOOL) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #1d2021;
+}
+
+#map {
+    width: 100vw;
+    height: 100vh;
+    background: #1d2021;
+}
+
+/* Gruvbox popup */
+.leaflet-popup-content-wrapper {
+    background: #3c3836;
+    color: #ebdbb2;
+    border: 1px solid #fabd2f;
+    border-radius: 8px;
+    font-family: Inter, system-ui, sans-serif;
+}
+.leaflet-popup-tip {
+    background: #fabd2f;
+}
+
+/* Controls */
+.leaflet-bar a {
+    background: #3c3836;
+    color: #ebdbb2;
+    border-bottom: 1px solid #504945;
+}
+.leaflet-bar a:hover {
+    background: #504945;
+    color: #fabd2f;
+}
+</style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<!-- JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script>
+/* ==========================================================
+   1. MAP CONFIG
+   ========================================================== */
+
+const MAP_SIZE = 7500;
+
+const map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: -3,
+    maxZoom: 3,
+    attributionControl: false
+});
+
+const bounds = [[0, 0], [MAP_SIZE, MAP_SIZE]];
+L.imageOverlay('kanto-detailed.png', bounds).addTo(map);
+map.fitBounds(bounds);
+
+/* ==========================================================
+   2. REGION HELPERS
+   ========================================================== */
+
+function addRegion({ name, desc, color, coords }) {
+    const region = L.polygon(coords, {
+        color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0
+    }).addTo(map);
+
+    region.bindPopup(`<h3>${name}</h3><p>${desc}</p>`);
+
+    region.on('mouseover', () =>
+        region.setStyle({ fillOpacity: 0.35, weight: 3 })
+    );
+    region.on('mouseout', () =>
+        region.setStyle({ fillOpacity: 0, weight: 2 })
+    );
+}
+
+/* ==========================================================
+   3. SAMPLE REGIONS
+   ========================================================== */
+
+addRegion({
+    name: "Pallet Town",
+    desc: "A quiet seaside town where every journey begins.",
+    color: "#fabd2f",
+    coords: [
+        [2830, 1490],
+        [2830, 1840],
+        [2543, 1840],
+        [2543, 1490]
+    ]
+});
+
+addRegion({
+    name: "Route 1",
+    desc: "",
+    color: "#fabd2f",
+    coords: [
+        [3476, 1490],
+        [3476, 1840],
+        [2838, 1840],
+        [2838, 1490]
+    ]
+});
+
+/* ==========================================================
+   4. DEV TOOL — RECTANGLE DRAWER
+   ========================================================== */
+
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+const drawControl = new L.Control.Draw({
+    draw: {
+        polygon: false,
+        polyline: false,
+        circle: false,
+        marker: false,
+        circlemarker: false,
+        rectangle: {
+            shapeOptions: {
+                color: '#fabd2f',
+                weight: 2
+            }
+        }
+    },
+    edit: {
+        featureGroup: drawnItems,
+        edit: false,
+        remove: true
+    }
+});
+
+map.addControl(drawControl);
+
+/* ==========================================================
+   5. AUTO-EXTRACT RECTANGLE COORDS
+   ========================================================== */
+
+map.on(L.Draw.Event.CREATED, e => {
+    const layer = e.layer;
+    drawnItems.addLayer(layer);
+
+    const b = layer.getBounds();
+
+    const coords = [
+        [Math.round(b.getNorthWest().lat), Math.round(b.getNorthWest().lng)],
+        [Math.round(b.getNorthEast().lat), Math.round(b.getNorthEast().lng)],
+        [Math.round(b.getSouthEast().lat), Math.round(b.getSouthEast().lng)],
+        [Math.round(b.getSouthWest().lat), Math.round(b.getSouthWest().lng)]
+    ];
+
+    console.log("Region coordinates:");
+    console.log(JSON.stringify(coords, null, 2));
+
+    layer.bindPopup(
+        `<strong>Rectangle coords</strong><pre>${JSON.stringify(coords, null, 2)}</pre>`
+    ).openPopup();
+});
+
+/* ==========================================================
+   6. SINGLE-CLICK COORD PICKER (OPTIONAL)
+   ========================================================== */
+
+map.on('click', e => {
+    const y = Math.round(e.latlng.lat);
+    const x = Math.round(e.latlng.lng);
+    console.log(`[${y}, ${x}]`);
+});
+</script>
+
+</body>
+</html>
