@@ -1,6 +1,7 @@
 const express=require('express');
 const cors = require('cors');
 const db=require('./src/db/db');
+// Unused 
 // const checkTypes = require('./src/utils/check_types');
 
 const app = express();
