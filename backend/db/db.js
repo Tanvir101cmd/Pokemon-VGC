@@ -1,15 +1,21 @@
 const mysql = require('mysql2');
-const db=mysql.createConnection({
-    // For macOS only
-    socketPath: '/tmp/mysql.sock',
-    // For windows or others delete the above line
+const os = require('os');
 
+const dbConfig = {
     host:'127.0.0.1',
     port: 3306,
     user:'tanvir',
     password: '',
     database:'PokemonVGC'
-});
+};
+
+// socketpath only for macOS
+if (process.platform === 'darwin') {
+    dbConfig.socketPath = '/tmp/mysql.sock';
+}
+
+const db = mysql.createConnection(dbConfig);
+
 db.connect((err)=>{
     if (err){
         console.error('Database connection failed:', err);
