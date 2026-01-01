@@ -9,7 +9,7 @@ const dbConfig = {
     database:'PokemonVGC'
 };
 
-// socketpath only for macOS
+// socketpath only required for macOS
 if (process.platform === 'darwin') {
     dbConfig.socketPath = '/tmp/mysql.sock';
 }
