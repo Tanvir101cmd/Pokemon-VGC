@@ -1,8 +1,8 @@
 const express=require('express');
 const cors = require('cors');
-const db=require('./src/db/db');
+const db=require('./backend/db/db');
 // Unused 
-// const checkTypes = require('./src/utils/check_types');
+// const checkTypes = require('./backend/utils/check_types');
 
 const app = express();
 app.use(cors());
