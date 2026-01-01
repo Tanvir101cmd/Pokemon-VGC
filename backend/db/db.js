@@ -7,7 +7,7 @@ const db=mysql.createConnection({
     host:'127.0.0.1',
     port: 3306,
     user:'tanvir',
-    password: 'linux',
+    password: '',
     database:'PokemonVGC'
 });
 db.connect((err)=>{
