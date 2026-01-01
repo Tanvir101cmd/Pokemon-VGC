@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Kanto Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+
+<aside class="sidebar">
+  <h2 class="logo">Menu</h2>
+  <a href="index.html">Dashboard</a>
+  <a href="pokedex.html">Pokédex</a>
+</aside>
+
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #eaf4ff;
+    color: #2b2f38;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+}
+
+#wrapper {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+
+#map {
+    flex: 1;
+    background: #dbeafe;
+}
+
+/* =========================
+   Pokédex Sidebar
+========================= */
+#sidebar {
+    width: 360px;
+    background: #ffffff;
+    padding: 20px;
+    border-left: 1px solid #c7d7eb;
+    box-shadow: -6px 0 16px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    border-top-left-radius: 18px;
+    border-bottom-left-radius: 18px;
+    position: relative;
+}
+
+/* Pokéball watermark */
+#sidebar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='100' cy='100' r='95' fill='none' stroke='%23e63946' stroke-width='10'/%3E%3Cline x1='5' y1='100' x2='195' y2='100' stroke='%23e63946' stroke-width='10'/%3E%3Ccircle cx='100' cy='100' r='25' fill='white' stroke='%23e63946' stroke-width='10'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 260px;
+    opacity: 0.04;
+    pointer-events: none;
+}
+
+h2 {
+    margin-top: 0;
+    color: #e63946;
+    font-weight: 700;
+}
+
+.region-desc {
+    font-style: italic;
+    color: #5f6b7a;
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+/* =========================
+   Encounter Table
+========================= */
+.encounter-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.encounter-table th {
+    text-align: left;
+    padding: 8px;
+    font-size: 0.9em;
+    color: #3a86ff;
+    border-bottom: 2px solid #3a86ff;
+}
+
+.encounter-table td {
+    padding: 10px 8px;
+    font-size: 0.9em;
+    border-bottom: 1px solid #e1e8f0;
+}
+
+/* Catch rate box */
+.catch-rate-box {
+    margin-top: auto;
+    padding: 14px;
+    background: #f1f7ff;
+    border: 1px solid #c7d7eb;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* Smooth region feedback */
+.leaflet-interactive {
+    transition: fill-opacity 120ms ease-out, opacity 120ms ease-out;
+}
+</style>
+</head>
+
+<body>
+
+<div id="wrapper">
+    <div id="map"></div>
+
+    <div id="sidebar">
+        <div id="sidebar-content">
+            <h2>Select a Region</h2>
+            <p>Click on an area of the map to view Pokémon encounters.</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script>
+/* =========================
+   Map Setup
+========================= */
+const MAP_SIZE = 7500;
+
+const map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: -3,
+    maxZoom: 3,
+    attributionControl: false
+});
+
+const bounds = [[0, 0], [MAP_SIZE, MAP_SIZE]];
+L.imageOverlay('assets/kanto-detailed.png', bounds).addTo(map);
+map.fitBounds(bounds);
+
+/* =========================
+   Region Logic
+========================= */
+let selectedLayer = null;
+
+function addRegion({ name, color, coords }) {
+    const region = L.polygon(coords, {
+        stroke: true,
+        color: "#3a86ff",
+        weight: 1,
+        opacity: 0.4,
+        fillColor: color,
+        fillOpacity: 0.12
+    }).addTo(map);
+
+    region.on('mouseover', () => {
+        if (region !== selectedLayer) {
+            region.setStyle({ fillOpacity: 0.25 });
+        }
+    });
+
+    region.on('mouseout', () => {
+        if (region !== selectedLayer) {
+            region.setStyle({ fillOpacity: 0.12 });
+        }
+    });
+
+    region.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+
+        if (selectedLayer) {
+            selectedLayer.setStyle({
+                fillOpacity: 0.12,
+                weight: 1,
+                opacity: 0.4
+            });
+        }
+
+        region.setStyle({
+            fillOpacity: 0.4,
+            weight: 2,
+            opacity: 0.8
+        });
+
+        selectedLayer = region;
+        fetchAndDisplayData(name);
+    });
+}
+
+/* =========================
+   Sidebar Data (NULL-safe)
+========================= */
+async function fetchAndDisplayData(name) {
+    const content = document.getElementById('sidebar-content');
+    content.innerHTML = `<h2>${name}</h2><p>Loading...</p>`;
+
+    try {
+        const res = await fetch(
+            `http://localhost:3000/region/encounters?name=${encodeURIComponent(name)}`
+        );
+        const data = await res.json();
+
+        // No rows at all
+        if (!Array.isArray(data) || data.length === 0) {
+            content.innerHTML = `
+                <h2>${name}</h2>
+                <p class="region-desc">No data available for this area.</p>
+            `;
+            return;
+        }
+
+        // Filter out NULL encounter rows
+        const validEncounters = data.filter(row =>
+            row.pokemon_name !== null
+        );
+
+        // Region metadata (safe)
+        const regionDesc = data[0].region_desc ?? "No data available for this area.";
+        const catchRate  = data[0].catch_rate ?? "N/A";
+
+        // If ALL encounters are null → treat as no data
+        if (validEncounters.length === 0) {
+            content.innerHTML = `
+                <h2>${name}</h2>
+                <p class="region-desc">${regionDesc}</p>
+                <p>No encounter data available for this area.</p>
+            `;
+            return;
+        }
+
+        // Build table rows only from valid encounters
+        const rows = validEncounters.map(r => `
+            <tr>
+                <td><strong>${r.pokemon_name}</strong></td>
+                <td>${r.encounter_rate}%</td>
+                <td>${r.method}</td>
+            </tr>
+        `).join("");
+
+        content.innerHTML = `
+            <h2>${name}</h2>
+            <p class="region-desc">${regionDesc}</p>
+            <table class="encounter-table">
+                <thead>
+                    <tr>
+                        <th>Pokémon</th>
+                        <th>Rate</th>
+                        <th>Method</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+            <div class="catch-rate-box">
+                Area Catch Rate: ${catchRate}
+            </div>
+        `;
+    } catch (err) {
+        console.error(err);
+        content.innerHTML = `
+            <h2>${name}</h2>
+            <p class="region-desc">Unable to load data.</p>
+        `;
+    }
+}
+
+
+/* =========================
+   Deselect on map click
+========================= */
+map.on('click', () => {
+    if (selectedLayer) {
+        selectedLayer.setStyle({
+            fillOpacity: 0.12,
+            weight: 1,
+            opacity: 0.4
+        });
+    }
+    selectedLayer = null;
+    document.getElementById('sidebar-content').innerHTML = `
+        <h2>Select a Region</h2>
+        <p>Click on an area of the map to view Pokémon encounters.</p>
+    `;
+});
+
+/* =========================
+   Regions (examples)
+========================= */
+addRegion({ name: "Pallet Town", color: "#fb4934", coords: [[2543, 1490], [2830, 1490], [2830, 1840], [2543, 1840]] });
+addRegion({ name: "Route 1",     color: "#b8bb26", coords: [[2838, 1490], [3476, 1490], [3476, 1840], [2838, 1840]] });
+
+addRegion({ name: "Viridian City", color: "#83a598", coords: [[3488, 1286], [4082, 1286], [4082, 2004], [3488, 2004]] });
+addRegion({ name: "Route 2",     color: "#fabd2f", coords: [[4108, 1488], [5362, 1488], [5362, 1842], [4108, 1842]] });
+
+addRegion({ name: "Pewter City", color: "#fabd2f", coords: [[5996,1294],[5996,2034],[5378,2034],[5378,1294]] });
+addRegion({ name: "Route 3", color: "#fabd2f", coords: [[5828,2050],[5828,3394],[5540,3394],[5540,2050]] });
+addRegion({ name: "Route 4", color: "#fabd2f", coords: [[6148,3012],[6148,4732],[5852,4732],[5852,3012]] });
+
+addRegion({ name: "Cerulean City", color: "#fabd2f", coords: [[6310,4738],[6310,5468],[5674,5468],[5674,4738]] });
+addRegion({ name: "Route 5", color: "#fabd2f", coords: [[5666,4830],[5666,5400],[5022,5400],[5022,4830]]  });
+
+addRegion({ name: "Saffron City", color: "#fabd2f", coords: [[5004,4594],[5004,5616],[4276,5616],[4276,4594]]  });
+addRegion({ name: "Route 7", color: "#fabd2f", coords: [[4858,4364],[4858,4668],[4560,4668],[4560,4364]] });
+
+addRegion({ name: "Celadon City", color: "#fabd2f", coords: [[5062,3408],[5062,4340],[4386,4340],[4386,3408]] });
+addRegion({ name: "Route 8", color: "#fabd2f", coords: [[4866,5628],[4866,6642],[4556,6642],[4556,5628]]  });
+
+addRegion({ name: "Lavender Town", color: "#fabd2f", coords: [[4865,6660],[4865,7032],[4557,7032],[4557,6660]] });
+addRegion({ name: "Route 12", color: "#fabd2f", coords: [[4544,6660],[4544,7036],[2624,7036],[2624,6660]] });
+
+addRegion({ name: "Pewter City", color: "#fabd2f", coords: [[5996,1294],[5996,2034],[5378,2034],[5378,1294]] });
+addRegion({ name: "Route 13", color: "#fabd2f", coords: [[2616,5896],[2616,7034],[2320,7034],[2320,5896]] });
+addRegion({ name: "Route 14", color: "#fabd2f", coords: [[2614,5520],[2614,5884],[1684,5884],[1684,5520]] });
+addRegion({ name: "Route 15", color: "#fabd2f", coords: [[1984,4360],[1984,5504],[1684,5504],[1684,4360]] });
+
+addRegion({ name: "Fuchsia City", color: "#fabd2f", coords: [[2140,3596],[2140,4338],[1512,4338],[1512,3596]] });
+addRegion({ name: "Route 19", color: "#fabd2f", coords: [[1500,3784],[1500,4150],[560,4150],[560,3784]] });
+addRegion({ name: "Route 20", color: "#fabd2f", coords: [[880,1848],[880,3768],[580,3768],[580,1848]] });
+
+addRegion({ name: "Cinnabar Island", color: "#fabd2f", coords: [[889,1550],[889,1844],[580,1844],[580,1550]] });
+addRegion({ name: "Route 21", color: "#fabd2f", coords: [[2524,1492],[2524,1840],[932,1840],[932,1492]] });
+addRegion({ name: "Route 24", color: "#fabd2f", coords: [[6944,4930],[6944,5308],[6320,5308],[6320,4930]] });
+addRegion({ name: "Route 25", color: "#fabd2f", coords: [[6942,5320],[6942,6456],[6640,6456],[6640,5320]] });
+addRegion({ name: "Route 6", color: "#fabd2f", coords: [[4258,4942],[4258,5302],[3758,5302],[3758,4942]] });
+
+addRegion({ name: "Vermillion City", color: "#fabd2f", coords: [[3746,4744],[3746,5498],[3120,5498],[3120,4744]] });
+addRegion({ name: "Route 11", color: "#fabd2f", coords: [[3584,5518],[3584,6650],[3278,6650],[3278,5518]] });
+
+addRegion({ name: "Route 22", color: "#fabd2f", coords: [[3928,468],[3928,1278],[3544,1278],[3544,468]] });
+addRegion({ name: "Route 23", color: "#fabd2f", coords: [[6808,516],[6808,892],[3940,892],[3940,516]] });
+addRegion({ name: "Route 10", color: "#fabd2f", coords: [[6152,6664],[6152,7024],[4876,7024],[4876,6664]] });
+addRegion({ name: "Route 9", color: "#fabd2f", coords: [[6148,5504],[6148,6654],[5838,6654],[5838,5504]] });
+
+</script>
+
+</body>
+</html>

@@ -1,295 +1,291 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Interactive Kanto Map</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Interactive Kanto Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+  <link rel="stylesheet" href="css/style.css">
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
-<style>
-html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: #eaf4ff;
-    color: #2b2f38;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    overflow: hidden;
-}
+  <style>
+    /* Prevent scrollbars on the main body since the map and sidebar handle their own scrolling */
+    body {
+        overflow: hidden; 
+    }
 
-#wrapper {
-    display: flex;
-    width: 100vw;
-    height: 100vh;
-}
+    /* Map Layout Container */
+    #map-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        height: calc(100vh - 70px); /* Adjust for topbar height */
+    }
 
-#map {
-    flex: 1;
-    background: #dbeafe;
-}
+    #map {
+        flex: 1;
+        background: #dbeafe;
+        z-index: 1;
+    }
 
-/* =========================
-   Pokédex Sidebar
-========================= */
-#sidebar {
-    width: 360px;
-    background: #ffffff;
-    padding: 20px;
-    border-left: 1px solid #c7d7eb;
-    box-shadow: -6px 0 16px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    border-top-left-radius: 18px;
-    border-bottom-left-radius: 18px;
-    position: relative;
-}
+    /* Region Info Panel (styled to match the Dashboard theme) */
+    #info-panel {
+        width: 380px;
+        background: #ffffff;
+        padding: 25px;
+        border-left: 2px solid crimson; /* Matching .topbar background */
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+        z-index: 10;
+    }
 
-/* Pokéball watermark */
-#sidebar::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='100' cy='100' r='95' fill='none' stroke='%23e63946' stroke-width='10'/%3E%3Cline x1='5' y1='100' x2='195' y2='100' stroke='%23e63946' stroke-width='10'/%3E%3Ccircle cx='100' cy='100' r='25' fill='white' stroke='%23e63946' stroke-width='10'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 260px;
-    opacity: 0.04;
-    pointer-events: none;
-}
+    .region-title {
+        color: crimson;
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 24px;
+        border-bottom: 2px solid #f1f1f1;
+        padding-bottom: 10px;
+    }
 
-h2 {
-    margin-top: 0;
-    color: #e63946;
-    font-weight: 700;
-}
+    .region-desc {
+        font-style: italic;
+        color: #5f6b7a;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
 
-.region-desc {
-    font-style: italic;
-    color: #5f6b7a;
-    margin-bottom: 15px;
-    line-height: 1.4;
-}
+    /* Encounter Table Styling */
+    .encounter-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
 
-/* =========================
-   Encounter Table
-========================= */
-.encounter-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
+    .encounter-table th {
+        text-align: left;
+        background: #f8f9fa;
+        padding: 10px;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        color: #666;
+        border-bottom: 2px solid crimson;
+    }
 
-.encounter-table th {
-    text-align: left;
-    padding: 8px;
-    font-size: 0.9em;
-    color: #3a86ff;
-    border-bottom: 2px solid #3a86ff;
-}
+    .encounter-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #eee;
+        font-size: 0.95em;
+    }
 
-.encounter-table td {
-    padding: 10px 8px;
-    font-size: 0.9em;
-    border-bottom: 1px solid #e1e8f0;
-}
+    .catch-rate-box {
+        margin-top: auto;
+        padding: 15px;
+        background: #fff5f5;
+        border: 1px dashed crimson;
+        border-radius: 10px;
+        font-weight: bold;
+        text-align: center;
+        color: #333;
+    }
 
-/* Catch rate box */
-.catch-rate-box {
-    margin-top: auto;
-    padding: 14px;
-    background: #f1f7ff;
-    border: 1px solid #c7d7eb;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-/* Smooth region feedback */
-.leaflet-interactive {
-    transition: fill-opacity 120ms ease-out, opacity 120ms ease-out;
-}
-</style>
+    /* Smooth region feedback */
+    .leaflet-interactive {
+        transition: fill-opacity 120ms ease-out, opacity 120ms ease-out;
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="wrapper">
-    <div id="map"></div>
+  <aside class="sidebar">
+    <h2 class="logo">Menu</h2>
+    <a href="index.html">Dashboard</a>
+    <a href="pokedex.html">Pokédex Viewer</a>
+    <a href="map.html">Pokemon Map Viewer</a>
+    <a href="./dmgCalcWeb.php">Damage Calculator</a>
+    <a href="#">Team Composition</a>    
+  </aside>
 
-    <div id="sidebar">
-        <div id="sidebar-content">
-            <h2>Select a Region</h2>
-            <p>Click on an area of the map to view Pokémon encounters.</p>
-        </div>
+  <main class="main">
+    <header class="topbar">
+      <h1>Kanto Exploration</h1>
+      <div class="user">Admin</div>
+    </header>
+
+    <div id="map-container">
+      <div id="map"></div>
+
+      <div id="info-panel">
+          <div id="sidebar-content">
+              <h2 class="region-title">Select a Region</h2>
+              <p>Click on an area of the map to view Pokémon encounters and local data.</p>
+          </div>
+      </div>
     </div>
-</div>
+  </main>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
-<script>
-/* =========================
-   Map Setup
-========================= */
-const MAP_SIZE = 7500;
+  <script>
+    /* =========================
+       Map Setup
+    ========================= */
+    const MAP_SIZE = 7500;
 
-const map = L.map('map', {
-    crs: L.CRS.Simple,
-    minZoom: -3,
-    maxZoom: 3,
-    attributionControl: false
-});
-
-const bounds = [[0, 0], [MAP_SIZE, MAP_SIZE]];
-L.imageOverlay('assets/kanto-detailed.png', bounds).addTo(map);
-map.fitBounds(bounds);
-
-/* =========================
-   Region Logic
-========================= */
-let selectedLayer = null;
-
-function addRegion({ name, color, coords }) {
-    const region = L.polygon(coords, {
-        stroke: true,
-        color: "#3a86ff",
-        weight: 1,
-        opacity: 0.4,
-        fillColor: color,
-        fillOpacity: 0.12
-    }).addTo(map);
-
-    region.on('mouseover', () => {
-        if (region !== selectedLayer) {
-            region.setStyle({ fillOpacity: 0.25 });
-        }
+    const map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: -3,
+        maxZoom: 3,
+        attributionControl: false
     });
 
-    region.on('mouseout', () => {
-        if (region !== selectedLayer) {
-            region.setStyle({ fillOpacity: 0.12 });
+    const bounds = [[0, 0], [MAP_SIZE, MAP_SIZE]];
+    L.imageOverlay('assets/kanto-detailed.png', bounds).addTo(map);
+    map.fitBounds(bounds);
+
+    /* =========================
+       Region Logic
+    ========================= */
+    let selectedLayer = null;
+
+    function addRegion({ name, color, coords }) {
+        const region = L.polygon(coords, {
+            stroke: true,
+            color: "crimson",
+            weight: 1,
+            opacity: 0.4,
+            fillColor: color,
+            fillOpacity: 0.15
+        }).addTo(map);
+
+        region.on('mouseover', () => {
+            if (region !== selectedLayer) {
+                region.setStyle({ fillOpacity: 0.3 });
+            }
+        });
+
+        region.on('mouseout', () => {
+            if (region !== selectedLayer) {
+                region.setStyle({ fillOpacity: 0.15 });
+            }
+        });
+
+        region.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+
+            if (selectedLayer) {
+                selectedLayer.setStyle({
+                    fillOpacity: 0.15,
+                    weight: 1,
+                    opacity: 0.4
+                });
+            }
+
+            region.setStyle({
+                fillOpacity: 0.5,
+                weight: 2,
+                opacity: 0.8
+            });
+
+            selectedLayer = region;
+            fetchAndDisplayData(name);
+        });
+    }
+
+    /* =========================
+       Sidebar Data Fetching
+    ========================= */
+    async function fetchAndDisplayData(name) {
+        const content = document.getElementById('sidebar-content');
+        content.innerHTML = `<h2 class="region-title">${name}</h2><p>Loading encounter data...</p>`;
+
+        try {
+            const res = await fetch(
+                `http://localhost:3000/region/encounters?name=${encodeURIComponent(name)}`
+            );
+            const data = await res.json();
+
+            if (!Array.isArray(data) || data.length === 0) {
+                content.innerHTML = `
+                    <h2 class="region-title">${name}</h2>
+                    <p class="region-desc">No data available for this area.</p>
+                `;
+                return;
+            }
+
+            const validEncounters = data.filter(row => row.pokemon_name !== null);
+            const regionDesc = data[0].region_desc ?? "Discover the secrets of this Kanto region.";
+            const catchRate  = data[0].catch_rate ?? "Standard";
+
+            if (validEncounters.length === 0) {
+                content.innerHTML = `
+                    <h2 class="region-title">${name}</h2>
+                    <p class="region-desc">${regionDesc}</p>
+                    <p>No wild encounters found here.</p>
+                `;
+                return;
+            }
+
+            const rows = validEncounters.map(r => `
+                <tr>
+                    <td><strong>${r.pokemon_name}</strong></td>
+                    <td>${r.encounter_rate}%</td>
+                    <td>${r.method}</td>
+                </tr>
+            `).join("");
+
+            content.innerHTML = `
+                <h2 class="region-title">${name}</h2>
+                <p class="region-desc">${regionDesc}</p>
+                <table class="encounter-table">
+                    <thead>
+                        <tr>
+                            <th>Pokémon</th>
+                            <th>Rate</th>
+                            <th>Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="catch-rate-box">
+                    Area Catch Difficulty: ${catchRate}
+                </div>
+            `;
+        } catch (err) {
+            console.error(err);
+            content.innerHTML = `
+                <h2 class="region-title">${name}</h2>
+                <p class="region-desc">Unable to connect to the Pokédex server.</p>
+            `;
         }
-    });
+    }
 
-    region.on('click', (e) => {
-        L.DomEvent.stopPropagation(e);
-
+    /* =========================
+       Deselect on map click
+    ========================= */
+    map.on('click', () => {
         if (selectedLayer) {
             selectedLayer.setStyle({
-                fillOpacity: 0.12,
+                fillOpacity: 0.15,
                 weight: 1,
                 opacity: 0.4
             });
         }
-
-        region.setStyle({
-            fillOpacity: 0.4,
-            weight: 2,
-            opacity: 0.8
-        });
-
-        selectedLayer = region;
-        fetchAndDisplayData(name);
+        selectedLayer = null;
+        document.getElementById('sidebar-content').innerHTML = `
+            <h2 class="region-title">Select a Region</h2>
+            <p>Click on an area of the map to view Pokémon encounters and local data.</p>
+        `;
     });
-}
 
-/* =========================
-   Sidebar Data (NULL-safe)
-========================= */
-async function fetchAndDisplayData(name) {
-    const content = document.getElementById('sidebar-content');
-    content.innerHTML = `<h2>${name}</h2><p>Loading...</p>`;
-
-    try {
-        const res = await fetch(
-            `http://localhost:3000/region/encounters?name=${encodeURIComponent(name)}`
-        );
-        const data = await res.json();
-
-        // No rows at all
-        if (!Array.isArray(data) || data.length === 0) {
-            content.innerHTML = `
-                <h2>${name}</h2>
-                <p class="region-desc">No data available for this area.</p>
-            `;
-            return;
-        }
-
-        // Filter out NULL encounter rows
-        const validEncounters = data.filter(row =>
-            row.pokemon_name !== null
-        );
-
-        // Region metadata (safe)
-        const regionDesc = data[0].region_desc ?? "No data available for this area.";
-        const catchRate  = data[0].catch_rate ?? "N/A";
-
-        // If ALL encounters are null → treat as no data
-        if (validEncounters.length === 0) {
-            content.innerHTML = `
-                <h2>${name}</h2>
-                <p class="region-desc">${regionDesc}</p>
-                <p>No encounter data available for this area.</p>
-            `;
-            return;
-        }
-
-        // Build table rows only from valid encounters
-        const rows = validEncounters.map(r => `
-            <tr>
-                <td><strong>${r.pokemon_name}</strong></td>
-                <td>${r.encounter_rate}%</td>
-                <td>${r.method}</td>
-            </tr>
-        `).join("");
-
-        content.innerHTML = `
-            <h2>${name}</h2>
-            <p class="region-desc">${regionDesc}</p>
-            <table class="encounter-table">
-                <thead>
-                    <tr>
-                        <th>Pokémon</th>
-                        <th>Rate</th>
-                        <th>Method</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-            <div class="catch-rate-box">
-                Area Catch Rate: ${catchRate}
-            </div>
-        `;
-    } catch (err) {
-        console.error(err);
-        content.innerHTML = `
-            <h2>${name}</h2>
-            <p class="region-desc">Unable to load data.</p>
-        `;
-    }
-}
-
-
-/* =========================
-   Deselect on map click
-========================= */
-map.on('click', () => {
-    if (selectedLayer) {
-        selectedLayer.setStyle({
-            fillOpacity: 0.12,
-            weight: 1,
-            opacity: 0.4
-        });
-    }
-    selectedLayer = null;
-    document.getElementById('sidebar-content').innerHTML = `
-        <h2>Select a Region</h2>
-        <p>Click on an area of the map to view Pokémon encounters.</p>
-    `;
-});
-
+    /* =========================
+       Region Definitions
+    ========================= */
 /* =========================
    Regions (examples)
 ========================= */
@@ -338,7 +334,7 @@ addRegion({ name: "Route 23", color: "#fabd2f", coords: [[6808,516],[6808,892],[
 addRegion({ name: "Route 10", color: "#fabd2f", coords: [[6152,6664],[6152,7024],[4876,7024],[4876,6664]] });
 addRegion({ name: "Route 9", color: "#fabd2f", coords: [[6148,5504],[6148,6654],[5838,6654],[5838,5504]] });
 
-</script>
+  </script>
 
 </body>
 </html>
