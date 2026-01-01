@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const db = require('./backend/db/db');
 const authRoutes = require('./backend/api/auth');
+
 // Unused 
 // const checkTypes = require('./backend/utils/check_types');
 
@@ -17,7 +18,7 @@ app.get('/',(req,res)=>{
     res.send('Backend is running');
 });
 
-// To view region encounters
+// To view region encounters in map
 app.get('/region/encounters', (req, res) => {
     const regionName = req.query.name;
 
