@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            justify-content: center;
+            align-items: center;
+            background: #222; /* Darker background for login */
+        }
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border-top: 5px solid crimson;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h2 {
+            color: crimson;
+            font-size: 28px;
+        }
+        .error-msg {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-header">
+        <h2>Trainer Login</h2>
+        <p>Enter your credentials to access the map</p>
+    </div>
+    
+    <div id="error" class="error-msg">Invalid username or password</div>
+
+    <form id="loginForm">
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="username" name="username" required placeholder="Enter username">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" name="password" required placeholder="Enter password">
+        </div>
+        <button type="submit" class="calc-btn" style="margin-top: 20px;">Login to Dashboard</button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const errorDiv = document.getElementById('error');
+
+        try {
+            const response = await fetch('http://localhost:3000/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store a simple "logged in" flag (use JWT/Cookies for real security)
+                localStorage.setItem('isLoggedIn', 'true');
+                window.location.href = 'index.html';
+            } else {
+                errorDiv.textContent = data.message;
+                errorDiv.style.display = 'block';
+            }
+        } catch (err) {
+            errorDiv.textContent = "Server connection failed";
+            errorDiv.style.display = 'block';
+        }
+    });
+</script>
+
+</body>
+</html>

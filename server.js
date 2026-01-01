@@ -1,12 +1,17 @@
 const express=require('express');
 const cors = require('cors');
-const db=require('./backend/db/db');
+const path = require('path');
+const db = require('./backend/db/db');
+const authRoutes = require('./backend/api/auth');
 // Unused 
 // const checkTypes = require('./backend/utils/check_types');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/api', authRoutes);
+
+app.use(express.static(path.join(__dirname, 'frontend')));
 
 app.get('/',(req,res)=>{
     res.send('Backend is running');
