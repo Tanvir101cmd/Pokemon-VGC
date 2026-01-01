@@ -1,16 +1,16 @@
-<script>
-    // Simple check: if the login flag isn't in local storage, redirect
-    if (localStorage.getItem('isLoggedIn') !== 'true') {
-        window.location.href = 'login.html';
-    }
-</script>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Poké Dashboard</title>
   <link rel="stylesheet" href="css/style.css" />
+  <script>
+        window.addEventListener('DOMContentLoaded', function() {
+          if (localStorage.getItem('isLoggedIn') !== 'true') {
+          window.location.href = 'login.html';
+    }
+    });
+  </script>
 </head>
 <body>
 
@@ -31,7 +31,7 @@
   <main class="main">
     <header class="topbar">
       <h1>Dashboard</h1>
-      <div class="user">Username</div>
+      <div class="user">profile</div>
     </header>
 
     <section class="cards">
