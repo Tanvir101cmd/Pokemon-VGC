@@ -15,31 +15,32 @@ app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
-// To view region encounters in map
 app.get("/region/encounters", (req, res) => {
   const regionName = req.query.name;
 
   const sql = `
-        SELECT
-            r.description AS region_desc,
-            p.name AS pokemon_name,
-            p.catch_rate,
-            e.encounter_rate,
-            e.method
-        FROM regions r
-        LEFT JOIN encounters e ON r.id = e.region_id
-        LEFT JOIN pokemon p ON e.pokemon_sid = p.sid
-        WHERE r.name = ?
-    `;
+    SELECT
+        r.name AS region_name,
+        r.description AS region_desc,
+        p.sid,
+        p.name AS pokemon_name,
+        p.catch_rate,
+        e.encounter_rate,
+        e.method
+    FROM regions r
+    LEFT JOIN encounters e ON r.id = e.region_id
+    LEFT JOIN pokemon p ON e.pokemon_sid = p.sid
+    WHERE r.name = ?
+  `;
 
   db.query(sql, [regionName], (err, result) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ error: "Internal Server Error" });
-    }
+    if (err) return res.status(500).json({ error: "Database error" });
+
+    // Even if no encounters, we return the region info from the first row
     res.json(result);
   });
 });
+
 
 // Pokemon search queries
 app.get("/pokemon/search", (req, res) => {

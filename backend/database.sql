@@ -374,7 +374,11 @@ INSERT INTO `encounters` VALUES
 (38,77,20,'Grass'),
 (38,84,35,'Grass'),
 (38,85,5,'Grass'),
-(38,129,100,'Old Rod');
+(38,129,100,'Old Rod'),
+(39,92,75,'Tower'),
+(39,93,20,'Tower'),
+(39,104,5,'Tower'),
+(39,105,100,'Special');
 /*!40000 ALTER TABLE `encounters` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -1011,7 +1015,7 @@ CREATE TABLE `regions` (
   `description` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1055,7 +1059,8 @@ INSERT INTO `regions` VALUES
 (35,'Route 10','A route divided by the Rock Tunnel. Its northern waterway leads to the Power Plant.'),
 (36,'Route 16','A scenic path west of Celadon. It features the northern gate to Cycling Road and a secret retreat.'),
 (37,'Route 17','The downhill stretch of Cycling Road, famous for its high-speed bicycle travel.'),
-(38,'Route 18','The southern terminus of Cycling Road, leading directly into Fuchsia City.');
+(38,'Route 18','The southern terminus of Cycling Road, leading directly into Fuchsia City.'),
+(39,'Lavender Town','A small town known for the Pokemon Tower, a large memorial for deceased Pokemon.');
 /*!40000 ALTER TABLE `regions` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -1309,4 +1314,4 @@ commit;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2026-01-06 19:13:45
+-- Dump completed on 2026-01-06 20:58:27
