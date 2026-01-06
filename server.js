@@ -135,6 +135,123 @@ app.get("/types", (req, res) => {
   });
 });
 
+// Get available moves for a Pokémon
+app.get('/pokemon/:id/moves', (req, res) => {
+    const id = req.params.id;
+
+    const sql = `
+        SELECT m.code, m.name, m.type_name as type, m.power, m.accuracy, m.category
+        FROM pokemon_moves pm
+        JOIN moves m ON pm.move_code = m.code
+        WHERE pm.pokemon_sid = ?
+        ORDER BY m.name
+    `;
+
+    db.query(sql, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json(results);
+    });
+});
+
+// Get abilities for a Pokémon
+app.get('/pokemon/:id/abilities', (req, res) => {
+    const id = req.params.id;
+
+    const sql = `
+        SELECT ability_name
+        FROM pokemon_abilities
+        WHERE pokemon_sid = ?
+        ORDER BY ability_name
+    `;
+
+    db.query(sql, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json(results.map(r => r.ability_name));
+    });
+});
+
+// Save team to database (if you want persistent storage)
+app.post('/team/save', (req, res) => {
+    const { userId, teamName, pokemonData } = req.body;
+
+    const sql = `
+        INSERT INTO user_teams (user_id, team_name, pokemon_data)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE pokemon_data = ?
+    `;
+
+    db.query(sql, [userId, teamName, JSON.stringify(pokemonData), JSON.stringify(pokemonData)], (err, result) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json({ success: true, teamId: result.insertId });
+    });
+});
+
+// Load team from database
+app.get('/team/load/:userId', (req, res) => {
+    const userId = req.params.userId;
+
+    const sql = `SELECT * FROM user_teams WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`;
+
+    db.query(sql, [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (results.length === 0) return res.json({ team: null });
+
+        try {
+            const teamData = JSON.parse(results[0].pokemon_data);
+            res.json({ team: teamData, teamName: results[0].team_name });
+        } catch (e) {
+            res.status(500).json({ error: 'Invalid team data' });
+        }
+    });
+});
+
+// Get Pokémon with full details including moves and abilities
+app.get('/pokemon/full/:id', (req, res) => {
+    const id = req.params.id;
+
+    const sql = `
+        SELECT
+            p.sid as id,
+            p.name,
+            GROUP_CONCAT(DISTINCT pt.type_name) as types,
+            GROUP_CONCAT(DISTINCT pa.ability_name) as abilities,
+            b.hp, b.attack, b.sp_atk, b.defence, b.sp_def, b.spd
+        FROM pokemon p
+        LEFT JOIN pokemon_types pt ON p.sid = pt.pokemon_sid
+        LEFT JOIN pokemon_abilities pa ON p.sid = pa.pokemon_sid
+        LEFT JOIN bst b ON p.sid = b.pokemon_sid
+        WHERE p.sid = ?
+        GROUP BY p.sid
+    `;
+
+    db.query(sql, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (results.length === 0) return res.status(404).json({ error: 'Pokémon not found' });
+
+        const pokemon = results[0];
+
+        // Parse comma-separated fields
+        pokemon.types = pokemon.types ? pokemon.types.split(',') : [];
+        pokemon.abilities = pokemon.abilities ? pokemon.abilities.split(',') : [];
+
+        // Get moves
+        const movesSql = `
+            SELECT m.name, m.type_name as type, m.power, m.accuracy, m.category
+            FROM pokemon_moves pm
+            JOIN moves m ON pm.move_code = m.code
+            WHERE pm.pokemon_sid = ?
+            ORDER BY m.name
+        `;
+
+        db.query(movesSql, [id], (err2, moves) => {
+            if (err2) return res.status(500).json({ error: 'Database error' });
+            pokemon.moves = moves || [];
+            res.json(pokemon);
+        });
+    });
+});
+
+
 // Detailed pokemon
 app.get("/pokemon/:id", (req, res) => {
   const id = req.params.id;
